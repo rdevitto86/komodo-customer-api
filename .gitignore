@@ -25,6 +25,10 @@ cpu.prof
 mem.prof
 trace.out
 
+# Node
+node_modules/
+coverage/
+
 # Generated
 *.pb.go
 *_mock.go
