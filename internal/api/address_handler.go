@@ -6,12 +6,14 @@ import (
 
 	httpErr "github.com/rdevitto86/komodo-forge-sdk-go/api/errors"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 )
 
-// GetAddressesHandler returns all addresses for the authenticated user.
 func (s *Service) GetAddressesHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
+	if userID == "" {
+		userID = userIDFromJWT(req)
+	}
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -28,9 +30,8 @@ func (s *Service) GetAddressesHandler(wtr http.ResponseWriter, req *http.Request
 	writeJSON(wtr, addrs)
 }
 
-// AddAddressHandler adds a new address for the authenticated user.
 func (s *Service) AddAddressHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -52,9 +53,8 @@ func (s *Service) AddAddressHandler(wtr http.ResponseWriter, req *http.Request) 
 	writeJSON(wtr, input)
 }
 
-// UpdateAddressHandler updates an address by ID for the authenticated user.
 func (s *Service) UpdateAddressHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -80,9 +80,8 @@ func (s *Service) UpdateAddressHandler(wtr http.ResponseWriter, req *http.Reques
 	wtr.WriteHeader(http.StatusOK)
 }
 
-// DeleteAddressHandler removes an address by ID for the authenticated user.
 func (s *Service) DeleteAddressHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return

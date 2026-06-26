@@ -1,5 +1,5 @@
 {
-  "name": "komodo-user-api-cdk",
+  "name": "komodo-customer-api-cdk",
   "version": "1.0.0",
   "type": "module",
   "main": "lib/main.js",

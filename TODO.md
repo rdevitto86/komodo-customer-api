@@ -20,14 +20,14 @@
 - **[x]** Repaired `.golangci.yaml` (v2 schema): moved `gofmt`/`goimports` into a `formatters:` block, dropped `gosimple` (merged into `staticcheck` in v2). Then aligned to auth-api's canonical config to reach green: `gosec` excludes G101/G104, `revive var-naming` disabled, `errcheck` excluded on `main.go`. Replaced 14 inline `json.NewEncoder(wtr).Encode(...)` with a checked `writeJSON(wtr, v)` helper on `Service` (mirrors auth-api `service.go`).
 - Gate fully green: `go build` / `go vet` / `TEST_TIER=component go test -race ./...` / `golangci-lint run` (0 issues).
 
-## Phase 1 — Correctness & logic flaws (mostly done 2026-06-23)
+## Phase 1 — Correctness & logic flaws ✅ (done 2026-06-26)
 
 - **[x] 404 → 500 on every by-key read.** v0.19.1 exposes a real sentinel `dynamodb.ErrNotFound`; aliased `db.ErrNotFound = dynamodb.ErrNotFound` so every SDK miss (wrapped via `%w`) is recognized by `isNotFound` → correct 404 on missing profile/address/payment/preference/passkey.
 - **[x] `updated_at` clobbered on PUT.** `UpdateProfile` now stamps `UpdatedAt = time.Now().UTC()` server-side; `CreatedAt`/`UpdatedAt` are `json:"-"` (no longer client-settable or serialized).
 - **[x] Ghost address on update.** `UpdateAddress` writes with `attribute_exists(SK)` condition; a missing ID now maps `ConditionalCheckFailed` → `ErrNotFound` (404) instead of creating an orphan.
 - **[x] `is_default` singleton enforced** across addresses/payments. New repo methods `SetAddressDefault`/`SetPaymentDefault` use partial `UpdateItem` (sets only `is_default`, **preserving the payment token** that read paths zero); service-layer `demoteOtherDefault*` helpers demote prior defaults on create/update when `is_default=true`. NOTE: non-atomic (list+update); Phase 3 transactions will harden.
 - **[x] `username`** added to `models.User`, persisted in `CreateUser`, returned via `toModel()`, and reflected in `openapi.yaml` (User + CreateUserRequest required). NOTE: not in the `UpdateUser` mutable-merge set — treated as set-at-create.
-- **[~] `resolveUserID` precedence footgun** — **DEFERRED** ([L]). Clean split needs route-aware handlers, but the same `Service` handler methods serve both `/me/*` (public, JWT) and `/users/{id}` (private, path). Safe today (`/me/*` defines no `{id}`, so it falls through to JWT). Revisit alongside a handler refactor (Phase 7/8).
+- **[x] `resolveUserID` precedence footgun** — split into `userIDFromJWT` (reads only `ctxKeys.USER_ID_KEY`) and `userIDFromPath` (reads only `req.PathValue("id")`). Fixed active ownership bypass on `PUT/DELETE /v1/me/addresses/{id}` and `DELETE /v1/me/payments/{id}`. Shared GET handlers (`GetProfileHandler`, `GetAddressesHandler`, `GetPaymentsHandler`, `GetPreferencesHandler`) use inline path-then-JWT fallback. Passkey handlers (private-only, `{id}` is always user ID) use `userIDFromPath` exclusively. Phase 7/8 handler refactor can eliminate the fallback pattern entirely.
 - **[x] `UpdateUser` immutable fields** — **DECIDED: silent-drop**, documented in `openapi.yaml` (`UpdateUserRequest` description lists ignored immutable/server-managed fields). Chosen over 400 to keep clients able to round-trip the full object.
 - Gate green: `go build` / `go vet` / `test -race` / `golangci-lint` (0 issues); `openapi.yaml` valid.
 
@@ -39,13 +39,13 @@
 - **[x]** Extended `auth_methods` enum in `openapi.yaml` from `[password, google, apple]` to `[password, passkey, otp, google, apple]` in both `CredentialsResponse` and `UserExistsResponse`. Added `UpdateCredentialsRequest` schema and `/v1/users/{id}/credentials` PUT path.
 - **[x]** Cross-repo: `CredentialsResponse` includes `user_id` field that auth-api's OTP handler consumes. Read+write contract ratified: GET returns credentials by email, PUT sets/rotates by user ID.
 
-## Phase 3 — Security hardening
+## Phase 3 — Security hardening ✅ (done 2026-06-26)
 
-- **[M] Rate-limit the enumeration oracle.** `GET /v1/users/exists?email=` (public, no JWT) is an intentional login-UI oracle. Apply a strict per-route per-IP limit (tighter than default); consider CAPTCHA/PoW before GA; document the tradeoff.
-- **[M] GDPR erasure non-atomic.** `DeleteUser` (`internal/db/user.go:226`) is Query + BatchDelete; partial failure orphans items (violates PRD FR#8). Migrate to `TransactWriteItems`.
-- **[M] Unbounded reads.** `QueryAllAs` on addresses/payments/passkeys has no `Limit`/cursor. Cap + paginate.
-- **[L]** Preserve payment `Token`-zeroing on all read paths through refactors (`internal/db/user.go:416,439`).
-- **[M]** Log-redaction audit: user-ids only, no PII in log values.
+- **[x] Rate-limit the enumeration oracle.** `GET /v1/users/exists?email=` (public, no JWT) is an intentional login-UI oracle. Per-IP 1 RPS / burst-5 strict limiter implemented in `newExistsRateLimiter()` in `cmd/public/main.go`, wrapping only that route as an outer layer before the global rate limiter; uses `httpReq.GetClientKey` for IP key consistency. CAPTCHA/PoW deferred to GA.
+- **[x] GDPR erasure atomic.** Migrated `DeleteUser` to `TransactWriteItems` in batches of ≤100 items; process-crash atomicity achieved for typical accounts. Chunks >100 items are processed in sequential 100-item transactions (not one atomic op across all chunks); gap logged as a warning. `transactDDBAPI` interface injected via `db.New` for testability.
+- **[x] Unbounded reads capped.** `GetUserAddresses`, `ListPayments`, `GetUserPasskeys` changed from `QueryAllAs` to `QueryAs` with `Limit: aws.Int32(100)`; cursor-based pagination deferred to Phase 4.
+- **[x] Payment Token-zeroing preserved** through list refactor — zeroing loop unchanged in `ListPayments` after `QueryAs` migration.
+- **[x] Log redaction audit passed** — no PII (email, phone, name) in log values across `internal/api/*.go` and `internal/db/user.go`; only user IDs and error values appear in structured log attributes.
 
 ## Phase 4 — Performance
 

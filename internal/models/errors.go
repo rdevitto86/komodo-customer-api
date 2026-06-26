@@ -6,7 +6,7 @@ import (
 	httpErr "github.com/rdevitto86/komodo-forge-sdk-go/api/errors"
 )
 
-// 30xxx — komodo-user-api (see forge-sdk ranges.go)
+// 30xxx — komodo-customer-api (see forge-sdk ranges.go)
 type UserAPIErrors struct {
 	NotFound           httpErr.ErrorCode
 	AlreadyExists      httpErr.ErrorCode

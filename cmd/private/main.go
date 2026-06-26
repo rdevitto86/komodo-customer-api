@@ -3,11 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"komodo-user-api/internal/api"
-	"komodo-user-api/internal/db"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awscfg "github.com/aws/aws-sdk-go-v2/config"
+	awsddbsvc "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+
+	"komodo-customer-api/internal/api"
+	"komodo-customer-api/internal/db"
 
 	sdkapi "github.com/rdevitto86/komodo-forge-sdk-go/api"
 	"github.com/rdevitto86/komodo-forge-sdk-go/api/handlers/health"
@@ -22,17 +27,17 @@ import (
 )
 
 const (
-	DYNAMODB_TABLE         = "DYNAMODB_TABLE"
-	USER_API_CLIENT_ID     = "USER_API_CLIENT_ID"
-	USER_API_CLIENT_SECRET = "USER_API_CLIENT_SECRET"
+	DYNAMODB_TABLE             = "DYNAMODB_TABLE"
+	CUSTOMER_API_CLIENT_ID     = "CUSTOMER_API_CLIENT_ID"
+	CUSTOMER_API_CLIENT_SECRET = "CUSTOMER_API_CLIENT_SECRET"
 )
 
 var secretKeys = []string{
 	jwt.JWT_PUBLIC_KEY,
 	jwt.JWT_AUDIENCE,
 	jwt.JWT_ISSUER,
-	USER_API_CLIENT_ID,
-	USER_API_CLIENT_SECRET,
+	CUSTOMER_API_CLIENT_ID,
+	CUSTOMER_API_CLIENT_SECRET,
 	DYNAMODB_TABLE,
 }
 
@@ -82,14 +87,25 @@ func bootstrap(ctx context.Context) (*jwt.Client, *awsddb.Client) {
 		logger.Fatal("failed to initialize dynamodb", err)
 	}
 
-	logger.Info("user-api internal: bootstrap complete")
+	logger.Info("customer-api internal: bootstrap complete")
 	return jwtClient, ddb
 }
 
 func main() {
 	ctx := context.Background()
 	jwtClient, ddb := bootstrap(ctx)
-	repo := db.New(ddb, os.Getenv(DYNAMODB_TABLE))
+
+	awsCfg, err := awscfg.LoadDefaultConfig(ctx, awscfg.WithRegion(os.Getenv(sdkaws.AWS_REGION)))
+	if err != nil {
+		logger.Fatal("failed to load aws config", err)
+	}
+	rawDDBOpts := []func(*awsddbsvc.Options){}
+	if ep := os.Getenv(sdkaws.AWS_ENDPOINT); ep != "" {
+		rawDDBOpts = append(rawDDBOpts, func(o *awsddbsvc.Options) { o.BaseEndpoint = aws.String(ep) })
+	}
+	rawDDB := awsddbsvc.NewFromConfig(awsCfg, rawDDBOpts...)
+
+	repo := db.New(ddb, rawDDB, os.Getenv(DYNAMODB_TABLE))
 	svc := api.NewService(repo)
 
 	internalMW := []func(http.Handler) http.Handler{
@@ -120,7 +136,7 @@ func main() {
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		ReadHeaderTimeout: 2 * time.Second,
-		MaxHeaderBytes:    1 << 20, // 1 MB
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	srv.Run(server, os.Getenv(sdkapi.PORT_PRIVATE), 30*time.Second)

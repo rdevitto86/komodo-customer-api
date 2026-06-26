@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"komodo-user-api/internal/db"
+	"komodo-customer-api/internal/db"
 
 	logger "github.com/rdevitto86/komodo-forge-sdk-go/logging/runtime"
 )

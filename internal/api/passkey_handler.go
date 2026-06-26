@@ -6,7 +6,7 @@ import (
 
 	httpErr "github.com/rdevitto86/komodo-forge-sdk-go/api/errors"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 )
 
 type passkeyListResponse struct {
@@ -14,7 +14,7 @@ type passkeyListResponse struct {
 }
 
 func (s *Service) GetPasskeysHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -32,7 +32,7 @@ func (s *Service) GetPasskeysHandler(wtr http.ResponseWriter, req *http.Request)
 }
 
 func (s *Service) AddPasskeyHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -59,7 +59,7 @@ func (s *Service) AddPasskeyHandler(wtr http.ResponseWriter, req *http.Request) 
 }
 
 func (s *Service) UpdatePasskeyHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -89,7 +89,7 @@ func (s *Service) UpdatePasskeyHandler(wtr http.ResponseWriter, req *http.Reques
 }
 
 func (s *Service) DeletePasskeyHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return

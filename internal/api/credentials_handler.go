@@ -7,7 +7,7 @@ import (
 
 	httpErr "github.com/rdevitto86/komodo-forge-sdk-go/api/errors"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 )
 
 func (s *Service) GetCredentialsHandler(wtr http.ResponseWriter, req *http.Request) {

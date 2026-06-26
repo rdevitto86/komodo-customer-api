@@ -7,19 +7,23 @@ import (
 	httpErr "github.com/rdevitto86/komodo-forge-sdk-go/api/errors"
 	ctxKeys "github.com/rdevitto86/komodo-forge-sdk-go/http/context"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 )
 
-func resolveUserID(req *http.Request) string {
-	if id := req.PathValue("id"); id != "" {
-		return id
-	}
+func userIDFromJWT(req *http.Request) string {
 	id, _ := req.Context().Value(ctxKeys.USER_ID_KEY).(string)
 	return id
 }
 
+func userIDFromPath(req *http.Request) string {
+	return req.PathValue("id")
+}
+
 func (s *Service) GetProfileHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
+	if userID == "" {
+		userID = userIDFromJWT(req)
+	}
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -37,7 +41,7 @@ func (s *Service) GetProfileHandler(wtr http.ResponseWriter, req *http.Request) 
 }
 
 func (s *Service) CreateUserHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -61,7 +65,7 @@ func (s *Service) CreateUserHandler(wtr http.ResponseWriter, req *http.Request) 
 }
 
 func (s *Service) UpdateProfileHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -85,7 +89,7 @@ func (s *Service) UpdateProfileHandler(wtr http.ResponseWriter, req *http.Reques
 }
 
 func (s *Service) DeleteProfileHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return

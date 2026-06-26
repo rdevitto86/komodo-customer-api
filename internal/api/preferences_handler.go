@@ -6,12 +6,14 @@ import (
 
 	httpErr "github.com/rdevitto86/komodo-forge-sdk-go/api/errors"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 )
 
-// GetPreferencesHandler returns preferences for the authenticated user.
 func (s *Service) GetPreferencesHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
+	if userID == "" {
+		userID = userIDFromJWT(req)
+	}
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -28,9 +30,8 @@ func (s *Service) GetPreferencesHandler(wtr http.ResponseWriter, req *http.Reque
 	writeJSON(wtr, prefs)
 }
 
-// UpdatePreferencesHandler updates preferences for the authenticated user.
 func (s *Service) UpdatePreferencesHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -52,9 +53,8 @@ func (s *Service) UpdatePreferencesHandler(wtr http.ResponseWriter, req *http.Re
 	writeJSON(wtr, input)
 }
 
-// DeletePreferencesHandler removes preferences for the authenticated user.
 func (s *Service) DeletePreferencesHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return

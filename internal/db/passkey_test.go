@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 )
 
 func TestPasskeyPKSK(t *testing.T) {

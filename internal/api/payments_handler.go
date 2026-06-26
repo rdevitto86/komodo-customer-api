@@ -6,12 +6,14 @@ import (
 
 	httpErr "github.com/rdevitto86/komodo-forge-sdk-go/api/errors"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 )
 
-// GetPaymentsHandler returns all saved payment methods for the authenticated user.
 func (s *Service) GetPaymentsHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromPath(req)
+	if userID == "" {
+		userID = userIDFromJWT(req)
+	}
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -28,9 +30,8 @@ func (s *Service) GetPaymentsHandler(wtr http.ResponseWriter, req *http.Request)
 	writeJSON(wtr, payments)
 }
 
-// UpsertPaymentHandler adds or updates a payment method for the authenticated user.
 func (s *Service) UpsertPaymentHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return
@@ -52,9 +53,8 @@ func (s *Service) UpsertPaymentHandler(wtr http.ResponseWriter, req *http.Reques
 	writeJSON(wtr, input)
 }
 
-// DeletePaymentHandler removes a payment method by ID for the authenticated user.
 func (s *Service) DeletePaymentHandler(wtr http.ResponseWriter, req *http.Request) {
-	userID := resolveUserID(req)
+	userID := userIDFromJWT(req)
 	if userID == "" {
 		httpErr.SendError(wtr, req, httpErr.Global.Unauthorized)
 		return

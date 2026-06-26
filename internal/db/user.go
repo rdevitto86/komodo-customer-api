@@ -7,24 +7,32 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsdynamodb "github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	ddbTypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/models"
 
 	"github.com/rdevitto86/komodo-forge-sdk-go/aws/dynamodb"
+	logger "github.com/rdevitto86/komodo-forge-sdk-go/logging/runtime"
 )
 
 var ErrNotFound = dynamodb.ErrNotFound
 var ErrAlreadyExists = errors.New("already exists")
 
-type Repo struct {
-	client *dynamodb.Client
-	table  string
+type transactDDBAPI interface {
+	TransactWriteItems(ctx context.Context, params *awsdynamodb.TransactWriteItemsInput, optFns ...func(*awsdynamodb.Options)) (*awsdynamodb.TransactWriteItemsOutput, error)
 }
 
-func New(client *dynamodb.Client, table string) *Repo {
-	return &Repo{client: client, table: table}
+type Repo struct {
+	client   *dynamodb.Client
+	txClient transactDDBAPI
+	table    string
+}
+
+func New(client *dynamodb.Client, txClient transactDDBAPI, table string) *Repo {
+	return &Repo{client: client, txClient: txClient, table: table}
 }
 
 type userRecord struct {
@@ -255,24 +263,53 @@ func (r *Repo) DeleteUser(ctx context.Context, userID string) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("repo.DeleteUser: query user items: %w", err)
+		return fmt.Errorf("failed to query user items: %w", err)
 	}
 	if len(items) == 0 {
 		return nil
 	}
 
-	keys := make([]map[string]ddbTypes.AttributeValue, 0, len(items))
-	for _, item := range items {
-		pk, hasPK := item["PK"]
-		sk, hasSK := item["SK"]
-		if !hasPK || !hasSK {
-			continue
-		}
-		keys = append(keys, map[string]ddbTypes.AttributeValue{"PK": pk, "SK": sk})
+	if len(items) > 100 {
+		logger.Warn("large user delete; processing in chunks",
+			logger.Attr("user_id", userID),
+			logger.Attr("item_count", len(items)),
+		)
 	}
 
-	if err := r.client.DeleteItem(ctx, r.table, nil, true, keys, nil); err != nil {
-		return fmt.Errorf("repo.DeleteUser: batch delete: %w", err)
+	const chunkSize = 100
+	for start := 0; start < len(items); start += chunkSize {
+		end := start + chunkSize
+		if end > len(items) {
+			end = len(items)
+		}
+
+		transactItems := make([]ddbTypes.TransactWriteItem, 0, end-start)
+		for _, item := range items[start:end] {
+			pk, hasPK := item["PK"]
+			sk, hasSK := item["SK"]
+			if !hasPK || !hasSK {
+				continue
+			}
+			transactItems = append(transactItems, ddbTypes.TransactWriteItem{
+				Delete: &ddbTypes.Delete{
+					TableName: aws.String(r.table),
+					Key: map[string]ddbTypes.AttributeValue{
+						"PK": pk,
+						"SK": sk,
+					},
+				},
+			})
+		}
+
+		if len(transactItems) == 0 {
+			continue
+		}
+
+		if _, err := r.txClient.TransactWriteItems(ctx, &awsdynamodb.TransactWriteItemsInput{
+			TransactItems: transactItems,
+		}); err != nil {
+			return fmt.Errorf("failed to delete user: %w", err)
+		}
 	}
 	return nil
 }
@@ -320,15 +357,16 @@ func (r *Repo) GetAddress(ctx context.Context, userID, addressID string) (*model
 
 func (r *Repo) GetUserAddresses(ctx context.Context, userID string) ([]models.Address, error) {
 	var records []addressRecord
-	if err := r.client.QueryAllAs(ctx, dynamodb.QueryInput{
+	if _, err := r.client.QueryAs(ctx, dynamodb.QueryInput{
 		TableName:              r.table,
 		KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
 		ExpressionValues: map[string]ddbTypes.AttributeValue{
 			":pk":       &ddbTypes.AttributeValueMemberS{Value: addrPK(userID)},
 			":skPrefix": &ddbTypes.AttributeValueMemberS{Value: "ADDR#"},
 		},
+		Limit: aws.Int32(100),
 	}, &records); err != nil {
-		return nil, fmt.Errorf("repo.GetUserAddresses: %w", err)
+		return nil, fmt.Errorf("failed to get user addresses: %w", err)
 	}
 
 	addrs := make([]models.Address, len(records))
@@ -432,15 +470,16 @@ func (r *Repo) GetPayment(ctx context.Context, userID, paymentID string) (*model
 
 func (r *Repo) ListPayments(ctx context.Context, userID string) ([]models.PaymentMethod, error) {
 	var records []paymentRecord
-	if err := r.client.QueryAllAs(ctx, dynamodb.QueryInput{
+	if _, err := r.client.QueryAs(ctx, dynamodb.QueryInput{
 		TableName:              r.table,
 		KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
 		ExpressionValues: map[string]ddbTypes.AttributeValue{
 			":pk":       &ddbTypes.AttributeValueMemberS{Value: payPK(userID)},
 			":skPrefix": &ddbTypes.AttributeValueMemberS{Value: "PAY#"},
 		},
+		Limit: aws.Int32(100),
 	}, &records); err != nil {
-		return nil, fmt.Errorf("repo.ListPayments: %w", err)
+		return nil, fmt.Errorf("failed to list payments: %w", err)
 	}
 
 	methods := make([]models.PaymentMethod, len(records))
@@ -563,13 +602,14 @@ func (r *Repo) CreatePasskey(ctx context.Context, userID string, cred *models.Pa
 
 func (r *Repo) GetUserPasskeys(ctx context.Context, userID string) ([]models.PasskeyCredential, error) {
 	var records []passkeyRecord
-	if err := r.client.QueryAllAs(ctx, dynamodb.QueryInput{
+	if _, err := r.client.QueryAs(ctx, dynamodb.QueryInput{
 		TableName:              r.table,
 		KeyConditionExpression: "PK = :pk AND begins_with(SK, :skPrefix)",
 		ExpressionValues: map[string]ddbTypes.AttributeValue{
 			":pk":       &ddbTypes.AttributeValueMemberS{Value: passkeyPK(userID)},
 			":skPrefix": &ddbTypes.AttributeValueMemberS{Value: "PASSKEY#"},
 		},
+		Limit: aws.Int32(100),
 	}, &records); err != nil {
 		return nil, fmt.Errorf("failed to query passkeys: %w", err)
 	}

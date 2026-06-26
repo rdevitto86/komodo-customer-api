@@ -66,7 +66,7 @@ The User API is the **sole owner of user identity data** for Komodo: the canonic
 ## Dependencies
 
 - `komodo-auth-api` — caller for credential resolution and passkey credential CRUD; this service serves auth-api on the login hot path.
-- `komodo-address-api` — address validation (user-api stores, address-api validates).
+- `komodo-address-api` — address validation (customer-api stores, address-api validates).
 - `komodo-payments-api` — consumer of stored payment method tokens via internal route.
 - DynamoDB (`komodo-users` table) — primary data store; single-table design.
 - Cache for profile data (V2 consideration).
@@ -83,5 +83,5 @@ The User API is the **sole owner of user identity data** for Komodo: the canonic
 
 - User data privacy breaches and GDPR/CCPA compliance — erasure must be complete and auditable; no orphaned items across the partition.
 - Performance with large user base (10M+ accounts) — DynamoDB single-table design scales horizontally but hot partitions are possible with poor key distribution.
-- Profile data inconsistency — no distributed transaction across user-api and downstream consumers; callers must tolerate eventual consistency.
+- Profile data inconsistency — no distributed transaction across customer-api and downstream consumers; callers must tolerate eventual consistency.
 - auth-api dependency risk — changes to the passkey credential or `CredentialsResponse` shape require coordinated updates across both services.

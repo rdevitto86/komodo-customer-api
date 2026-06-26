@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"komodo-user-api/internal/db"
-	"komodo-user-api/internal/models"
+	"komodo-customer-api/internal/db"
+	"komodo-customer-api/internal/models"
 )
 
 var ErrNotFound = errors.New("not found")

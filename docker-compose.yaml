@@ -1,11 +1,11 @@
-name: komodo-user-api
+name: komodo-customer-api
 
 services:
-  user-api-public:
-    image: komodo-user-api-public:${VERSION:-dev}
+  customer-api-public:
+    image: komodo-customer-api-public:${VERSION:-dev}
     build:
       context: ..
-      dockerfile: komodo-user-api/Dockerfile
+      dockerfile: komodo-customer-api/Dockerfile
       args:
         BUILD_TARGET: public
         DISTROLESS_TAG: ${DISTROLESS_TAG:-debug}
@@ -17,12 +17,12 @@ services:
     env_file:
       - ../../infra/local/env.shared
     environment:
-      APP_NAME: komodo-user-api
+      APP_NAME: komodo-customer-api
       PORT: ":7051"
       VERSION: ${VERSION:-dev}
       EVAL_RULES_PATH: /app/config/validation_rules.yaml
       AWS_REGION: ${AWS_REGION:-us-east-2}
-      AWS_SECRET_PATH: ${SECRET_PATH:-komodo/local/user-api}
+      AWS_SECRET_PATH: ${SECRET_PATH:-komodo/local/customer-api}
       DYNAMODB_TABLE: ${DYNAMODB_TABLE:-komodo-users-dev}
     ports:
       - "7051:7051"
@@ -39,19 +39,19 @@ services:
       - komodo-network
 
   # Shares the public container's network namespace
-  # Accessible to other services on komodo-network as user-api-public:7052.
+  # Accessible to other services on komodo-network as customer-api-public:7052.
   # On Fargate, both containers run in the same task and share the task network interface.
-  user-api-private:
-    image: komodo-user-api-private:${VERSION:-dev}
+  customer-api-private:
+    image: komodo-customer-api-private:${VERSION:-dev}
     build:
       context: ..
-      dockerfile: komodo-user-api/Dockerfile
+      dockerfile: komodo-customer-api/Dockerfile
       args:
         BUILD_TARGET: private
         DISTROLESS_TAG: ${DISTROLESS_TAG:-debug}
-    network_mode: "service:user-api-public"
+    network_mode: "service:customer-api-public"
     depends_on:
-      user-api-public:
+      customer-api-public:
         condition: service_healthy
 
     restart: ${RESTART_POLICY:-no}
@@ -62,11 +62,11 @@ services:
     env_file:
       - ../../infra/local/env.shared
     environment:
-      APP_NAME: komodo-user-api-internal
+      APP_NAME: komodo-customer-api-internal
       PORT_PRIVATE: ":7052"
       VERSION: ${VERSION:-dev}
       AWS_REGION: ${AWS_REGION:-us-east-2}
-      AWS_SECRET_PATH: ${SECRET_PATH:-komodo/local/user-api}
+      AWS_SECRET_PATH: ${SECRET_PATH:-komodo/local/customer-api}
       DYNAMODB_TABLE: ${DYNAMODB_TABLE:-komodo-users-dev}
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:7052/health"]

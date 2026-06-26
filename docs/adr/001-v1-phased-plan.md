@@ -12,7 +12,7 @@ The User API is the sole owner of user identity data for Komodo — the canonica
 
 **Entry state (2026-06-23):**
 
-- **Build is red.** An `internal/repo` → `internal/db` rename plus an `internal/config` deletion is half-applied: `internal/db/user.go` still declares `package repo` and imports the deleted `internal/config`; `internal/api/user.go:11` and both `cmd/*/main.go` still import `komodo-user-api/internal/repo` and `.../internal/config`. `go build ./...` fails.
+- **Build is red.** An `internal/repo` → `internal/db` rename plus an `internal/config` deletion is half-applied: `internal/db/user.go` still declares `package repo` and imports the deleted `internal/config`; `internal/api/user.go:11` and both `cmd/*/main.go` still import `komodo-customer-api/internal/repo` and `.../internal/config`. `go build ./...` fails.
 - **Tests are stubs.** Every `internal/api/*_test.go` except passkeys is `// TODO: Add tests`; only passkey handler/db and `e2e/` carry real tests.
 - **Spec drift.** The PRD declared the service passwordless. Product direction (recorded below) is dual-mode — passwordless-primary with password as a supported backup. The PRD non-goal, not the code, is the thing that is wrong.
 
@@ -20,10 +20,10 @@ Work is organized into Phases 0–8, sequenced by risk. Every phase exits on the
 
 ## Decision — dual-mode auth (passwordless-primary, password-backup)
 
-Komodo leans into passwordless (passkeys + OTP) as the primary experience but **retains password login as a backup**, because most customers are not yet ready for passwordless-only. Consequences for user-api:
+Komodo leans into passwordless (passkeys + OTP) as the primary experience but **retains password login as a backup**, because most customers are not yet ready for passwordless-only. Consequences for customer-api:
 
 - `password_hash` remains stored identity data. It stays out of every **public** request/response body (`json:"-"` on `models.User`), and is returned only on the private `GET /v1/users/credentials` route that auth-api consumes.
-- **Hashing stays out of user-api** (PRD non-goal: not an authenticator). auth-api hashes plaintext (Argon2id; forge-sdk `security/hashing`, possibly gated) and writes the resulting hash via a new private write path. user-api never accepts a client-supplied precomputed hash and never hashes on a public route — this closes the original auth-api audit finding (client choosing its own stored hash) without making user-api an authenticator.
+- **Hashing stays out of customer-api** (PRD non-goal: not an authenticator). auth-api hashes plaintext (Argon2id; forge-sdk `security/hashing`, possibly gated) and writes the resulting hash via a new private write path. customer-api never accepts a client-supplied precomputed hash and never hashes on a public route — this closes the original auth-api audit finding (client choosing its own stored hash) without making customer-api an authenticator.
 - New accounts default to a passwordless-primary posture; `password` is appended to `auth_methods` only when a password is actually set. Today `CreateUser` wrongly defaults `auth_methods=["password"]` (`internal/api/user.go:39`).
 - The PRD "passwordless / no password fields" non-goal is corrected to document dual-mode.
 
@@ -71,7 +71,7 @@ Implements the decision above.
 
 - Correct the PRD non-goal: document dual-mode (passkey/OTP primary, password backup); remove the "no password hashes/fields exist anywhere" language.
 - Keep `password_hash` stored and `json:"-"` on the public surface; keep it on `CredentialsResponse` for the private route only.
-- **Fix the write-impossible defect.** `password_hash` is `json:"-"` on `models.User`, so nothing can ever set it — the credentials endpoint can only return an empty hash. Add a private write path (recommend `PUT /v1/users/{id}/credentials` or `.../password`) so auth-api can set/rotate the hash after hashing plaintext with Argon2id. user-api stores; it never hashes on a public route and never accepts a client-supplied hash.
+- **Fix the write-impossible defect.** `password_hash` is `json:"-"` on `models.User`, so nothing can ever set it — the credentials endpoint can only return an empty hash. Add a private write path (recommend `PUT /v1/users/{id}/credentials` or `.../password`) so auth-api can set/rotate the hash after hashing plaintext with Argon2id. customer-api stores; it never hashes on a public route and never accepts a client-supplied hash.
 - Change the `CreateUser` default from `auth_methods=["password"]` to a passwordless-primary posture; append `password` only when a password is set.
 - Extend the `auth_methods` enum in `openapi.yaml` to include `passkey`/`otp` (currently `[password, google, apple]`).
 - Cross-repo: ratify the credentials read+write contract with auth-api (it owns Argon2id hashing and verification).
@@ -123,6 +123,6 @@ Today near-zero outside passkeys. Mirror auth-api Phase 4:
 ## Consequences
 
 - Risk-first sequencing front-loads the build blocker (0) and observable-correctness bugs (1) before feature work (2, 6) and quality (7, 8).
-- The dual-mode decision keeps user-api a pure data store: auth-api owns hashing and verification, user-api owns storage and the read/write contract. This preserves the PRD's "not an authenticator" non-goal while supporting password login.
+- The dual-mode decision keeps customer-api a pure data store: auth-api owns hashing and verification, customer-api owns storage and the read/write contract. This preserves the PRD's "not an authenticator" non-goal while supporting password login.
 - The 404→500 bug and the non-atomic GDPR delete are the two findings with direct external impact (auth-api error mapping; regulatory erasure guarantees) — both land before Phase 7 so tests lock the corrected behavior.
 - Phases pass the swe→QA cross-review gate; the build gate (`build && vet && TEST_TIER=component test -race`) is the floor for every phase.

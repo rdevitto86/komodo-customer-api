@@ -1,4 +1,4 @@
-# komodo-user-api
+# komodo-customer-api
 
 User profile, address, payment method, and preference management for the Komodo platform.
 
@@ -53,7 +53,7 @@ User profile, address, payment method, and preference management for the Komodo 
 
 | Variable            | Required | Description                                          |
 |---------------------|----------|------------------------------------------------------|
-| `APP_NAME`          | Yes      | Service name for logging (`komodo-user-api`)         |
+| `APP_NAME`          | Yes      | Service name for logging (`komodo-customer-api`)         |
 | `ENV`               | Yes      | Runtime environment (`local`, `dev`, `staging`, `prod`) |
 | `LOG_LEVEL`         | Yes      | Log verbosity (`debug`, `info`, `error`)             |
 | `PORT`              | Yes      | Public server port (default: `7051`)                 |
@@ -61,7 +61,7 @@ User profile, address, payment method, and preference management for the Komodo 
 | `VERSION`           | No       | Deployed version tag                                 |
 | `AWS_REGION`        | Yes      | AWS region (e.g. `us-east-1`)                        |
 | `AWS_ENDPOINT`      | Yes      | AWS/LocalStack endpoint URL                          |
-| `AWS_SECRET_PREFIX` | Yes      | Secrets Manager path prefix (e.g. `komodo-user-api/local`) |
+| `AWS_SECRET_PREFIX` | Yes      | Secrets Manager path prefix (e.g. `komodo-customer-api/local`) |
 | `AWS_SECRET_BATCH`  | Yes      | Batch secret path (e.g. `/all-secrets`)              |
 | `EVAL_RULES_PATH`   | No       | Path to validation rules file                        |
 
@@ -73,8 +73,8 @@ User profile, address, payment method, and preference management for the Komodo 
 | `DYNAMODB_ACCESS_KEY`    | DynamoDB AWS access key |
 | `DYNAMODB_SECRET_KEY`    | DynamoDB AWS secret key |
 | `DYNAMODB_TABLE`         | DynamoDB table name (`komodo-users`) |
-| `USER_API_CLIENT_ID`     | Service client ID (used to obtain tokens from auth-api) |
-| `USER_API_CLIENT_SECRET` | Service client secret |
+| `CUSTOMER_API_CLIENT_ID`     | Service client ID (used to obtain tokens from auth-api) |
+| `CUSTOMER_API_CLIENT_SECRET` | Service client secret |
 | `JWT_PUBLIC_KEY`         | RSA public key (PEM) from auth-api — used to validate incoming tokens |
 | `JWT_PRIVATE_KEY`        | RSA private key (PEM) — required by `InitializeKeys()`; not used for signing |
 | `JWT_KID`                | Key ID (`test-kid` locally) |
@@ -100,7 +100,7 @@ User profile, address, payment method, and preference management for the Komodo 
 ### Run (public + internal in separate terminals)
 
 ```bash
-cd komodo-user-api
+cd komodo-customer-api
 
 # Terminal 1 — public API on :7051
 source .env.local && go run ./cmd/public
@@ -121,7 +121,7 @@ TOKEN=$(curl -s -X POST http://localhost:7011/oauth/token \
 # Service-scoped token for internal routes
 SVC_TOKEN=$(curl -s -X POST http://localhost:7011/oauth/token \
   -H "Content-Type: application/json" \
-  -d '{"clientId":"test-client","clientSecret":"test-secret","grantType":"client_credentials","scope":"svc:user-api"}' \
+  -d '{"clientId":"test-client","clientSecret":"test-secret","grantType":"client_credentials","scope":"svc:customer-api"}' \
   | jq -r .accessToken)
 
 # ── Health ────────────────────────────────────────────────────────────────────
@@ -255,10 +255,10 @@ curl -s http://localhost:7052/users/usr_abc123/payments \
 go test ./...
 
 # Start via monorepo (preferred)
-just up api          # starts infra + user-api (if enabled in services.jsonc)
+just up api          # starts infra + customer-api (if enabled in services.jsonc)
 
 # Docker (standalone — requires komodo-network, run just up first)
-cd apis/komodo-user-api
+cd apis/komodo-customer-api
 docker compose up --build
 ```
 

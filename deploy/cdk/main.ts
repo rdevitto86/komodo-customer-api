@@ -24,8 +24,8 @@ import {
   MetricFilterAlarm,
 } from 'komodo-forge-sdk-ts/cdk/constructs';
 
-export const API_NAME = 'komodo-user-api';
-export const CONTAINER_NAME = 'user-api';
+export const API_NAME = 'komodo-customer-api';
+export const CONTAINER_NAME = 'customer-api';
 export const PUBLIC_PORT = 7051;
 export const PRIVATE_PORT = 7052;
 export const PUBLIC_VERSION = 'latest';
@@ -44,7 +44,7 @@ export const DEV_CONFIG: UserEnvConfig = {
   certificateArn: 'PLACEHOLDER-acm-cert-arn-us-east-2',
   secretPath: `komodo/${ENV_DEV}/${CONTAINER_NAME}`,
   vpcTag: `komodo-${ENV_DEV}`,
-  domainName: `user-${ENV_DEV}.komodo.com`,
+  domainName: `customer-${ENV_DEV}.komodo.com`,
   tags: {
     ...defaultTags(),
     project: API_NAME,
@@ -61,7 +61,7 @@ export const STG_CONFIG: UserEnvConfig = {
   cloudFrontCertificateArn: 'PLACEHOLDER-acm-cert-arn-us-east-1',
   secretPath: `komodo/${ENV_STAGING}/${CONTAINER_NAME}`,
   vpcTag: `komodo-${ENV_STAGING}`,
-  domainName: `user-${ENV_STAGING}.komodo.com`,
+  domainName: `customer-${ENV_STAGING}.komodo.com`,
   tags: {
     ...defaultTags(),
     project: API_NAME,
@@ -78,7 +78,7 @@ export const PROD_CONFIG: UserEnvConfig = {
   cloudFrontCertificateArn: 'PLACEHOLDER-acm-cert-arn-us-east-1',
   secretPath: `komodo/${ENV_PROD}/${CONTAINER_NAME}`,
   vpcTag: `komodo-${ENV_PROD}`,
-  domainName: 'user.komodo.com',
+  domainName: 'customer.komodo.com',
   tags: {
     ...defaultTags(),
     project: API_NAME,
@@ -155,7 +155,7 @@ export const buildPrivateContainer = (stack: cdk.Stack, { vpc, cluster, logGroup
   });
 
 export const buildWaf = (stack: cdk.Stack, alb: elbv2.ApplicationLoadBalancer): WafWebAcl => new WafWebAcl(stack, 'Waf', {
-  metricPrefix: 'KomodoUserWaf',
+  metricPrefix: 'KomodoCustomerWaf',
   associateAlb: alb,
   managedRuleGroups: [
     { name: 'AWSManagedRulesCommonRuleSet' },
@@ -180,18 +180,18 @@ export const buildUserAlarms = (stack: cdk.Stack, logGroup: logs.ILogGroup, alb:
   new MetricFilterAlarm(stack, 'User5xx', {
     logGroup,
     filterPattern: '{ $.status >= 500 }',
-    metricNamespace: 'KomodoUser',
-    metricName: 'User5xxCount',
-    alarmName: 'User5xxAlarm',
+    metricNamespace: 'KomodoCustomer',
+    metricName: 'Customer5xxCount',
+    alarmName: 'Customer5xxAlarm',
     threshold: 10,
   });
 
   new MetricFilterAlarm(stack, 'UserNotFound', {
     logGroup,
     filterPattern: '{ $.status = 404 && $.path = "/v1/users/*" }',
-    metricNamespace: 'KomodoUser',
-    metricName: 'UserNotFoundCount',
-    alarmName: 'UserNotFoundAlarm',
+    metricNamespace: 'KomodoCustomer',
+    metricName: 'CustomerNotFoundCount',
+    alarmName: 'CustomerNotFoundAlarm',
     threshold: 100,
   });
 
@@ -266,7 +266,7 @@ export const createInfra = () => {
     for (const rd of cfg.regions) {
       if (!rd.enabled) continue;
       const suffix = rd.suffix ? `-${rd.suffix}` : '';
-      const stack = new cdk.Stack(app, `KomodoUser-${cfg.env}${suffix}`, { env: { account, region: rd.region } });
+      const stack = new cdk.Stack(app, `KomodoCustomer-${cfg.env}${suffix}`, { env: { account, region: rd.region } });
       buildStack(stack, cfg);
     }
   } catch (err) {

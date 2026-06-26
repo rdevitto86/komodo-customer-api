@@ -45,9 +45,9 @@ describe('configs', () => {
       minCapacity: 1,
       maxCapacity: 1,
       usersTable: 'komodo-users-dev',
-      secretPath: 'komodo/dev/user-api',
+      secretPath: 'komodo/dev/customer-api',
       vpcTag: 'komodo-dev',
-      domainName: 'user-dev.komodo.com',
+      domainName: 'customer-dev.komodo.com',
     });
     expect(DEV_CONFIG.downstreamUrls).toEqual([]);
     expect(DEV_CONFIG.tags).toMatchObject({ project: API_NAME, environment: 'dev', dataClassification: 'pii' });
@@ -59,9 +59,9 @@ describe('configs', () => {
       memory: 1024,
       maxCapacity: 3,
       usersTable: 'komodo-users-stg',
-      secretPath: 'komodo/staging/user-api',
+      secretPath: 'komodo/staging/customer-api',
       vpcTag: 'komodo-staging',
-      domainName: 'user-staging.komodo.com',
+      domainName: 'customer-staging.komodo.com',
     });
     expect(STG_CONFIG.tags).toMatchObject({ dataClassification: 'pii' });
   });
@@ -72,8 +72,8 @@ describe('configs', () => {
       memory: 2048,
       maxCapacity: 6,
       usersTable: 'komodo-users-prod',
-      secretPath: 'komodo/prod/user-api',
-      domainName: 'user.komodo.com',
+      secretPath: 'komodo/prod/customer-api',
+      domainName: 'customer.komodo.com',
     });
     expect(PROD_CONFIG.tags).toMatchObject({ dataClassification: 'pii' });
   });
