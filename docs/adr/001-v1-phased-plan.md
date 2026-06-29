@@ -31,15 +31,15 @@ Komodo leans into passwordless (passkeys + OTP) as the primary experience but **
 
 | Phase | Name | Status | Primary areas |
 |---|---|---|---|
-| 0 | Restore green build + config migration | ⛔ Blocker | Bug sweep, Code quality |
-| 1 | Correctness & logic flaws | Open | Logic flaws, Bug sweep, Error handling |
-| 2 | Dual-mode auth (passwordless-primary, password-backup) | Open | Logic flaws, Security, Missing features |
-| 3 | Security hardening | Open | Security, GDPR business logic |
-| 4 | Performance | Open | Performance |
-| 5 | Error handling & logger/observability | Open | Error handling, Logger coverage |
-| 6 | Missing features / business logic | Open | Missing features & business logic |
-| 7 | Test coverage retrofit | Open | Test coverage, Code quality |
-| 8 | Code-quality & CI alignment | Open | Code quality |
+| 0 | Restore green build + config migration | Done (2026-06-23) | Bug sweep, Code quality |
+| 1 | Correctness & logic flaws | Done (2026-06-26) | Logic flaws, Bug sweep, Error handling |
+| 2 | Dual-mode auth (passwordless-primary, password-backup) | Done (2026-06-23) | Logic flaws, Security, Missing features |
+| 3 | Security hardening | Done (2026-06-26) | Security, GDPR business logic |
+| 4 | Performance | Done (2026-06-26) | Performance |
+| 5 | Error handling & logger/observability | Done (2026-06-26) | Error handling, Logger coverage |
+| 6 | Missing features / business logic | Done (2026-06-27) | Missing features & business logic |
+| 7 | Test coverage retrofit | Done (2026-06-28) | Test coverage, Code quality |
+| 8 | Code-quality & CI alignment | In Progress | Code quality |
 
 Itemized, sequenced checklists with file:line references live in `TODO.md`. This ADR records the rationale and the sequencing.
 

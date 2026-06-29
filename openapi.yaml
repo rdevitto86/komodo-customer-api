@@ -32,6 +32,7 @@ tags:
   - name: Addresses
   - name: Payments
   - name: Preferences
+  - name: Consent
   - name: Internal
 
 # ---------------------------------------------------------------------------
@@ -154,6 +155,43 @@ paths:
           description: Account deleted
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/me/profile/export:
+    post:
+      tags: [Profile]
+      summary: Request GDPR profile export
+      operationId: exportProfile
+      x-visibility: public
+      responses:
+        "201":
+          description: Export initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportProfileResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Consent ──────────────────────────────────────────────────────────────
+
+  /v1/unsubscribe:
+    post:
+      tags: [Consent]
+      summary: Verify unsubscribe token and record consent opt-out
+      operationId: unsubscribe
+      x-visibility: public
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnsubscribeRequest"
+      responses:
+        "204":
+          description: Unsubscribed successfully
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -617,6 +655,122 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ── Customer Settings ─────────────────────────────────────────────────────
+
+  /v1/customers/{id}/settings:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    get:
+      tags: [Internal]
+      summary: Get account settings
+      operationId: getCustomerSettings
+      x-visibility: private
+      security:
+        - ServiceJWT: []
+      responses:
+        "200":
+          description: Account settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Internal]
+      summary: Update account settings
+      operationId: updateCustomerSettings
+      x-visibility: private
+      security:
+        - ServiceJWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsRequest"
+      responses:
+        "200":
+          description: Updated account settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/customers/{id}/settings/tags:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    put:
+      tags: [Internal]
+      summary: Update account tags (namespace-ACL enforced)
+      operationId: updateCustomerSettingsTags
+      x-visibility: private
+      security:
+        - ServiceJWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsTagsRequest"
+      responses:
+        "200":
+          description: Updated account settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /internal/v1/customers/{id}/unsubscribe-token:
+    parameters:
+      - $ref: "#/components/parameters/UserID"
+    post:
+      tags: [Internal]
+      summary: Mint stateless unsubscribe token
+      operationId: mintUnsubscribeToken
+      x-visibility: private
+      security:
+        - ServiceJWT: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel]
+              properties:
+                channel:
+                  type: string
+      responses:
+        "201":
+          description: Token minted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MintUnsubscribeTokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 # ---------------------------------------------------------------------------
 # Components
 # ---------------------------------------------------------------------------
@@ -900,6 +1054,103 @@ components:
         last_used_at:
           type: [string, "null"]
           format: date-time
+
+    AccountSettings:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, suspended, closed, pending_deletion]
+        status_reason:
+          type: string
+        status_changed_at:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        segments:
+          type: object
+          additionalProperties:
+            type: string
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [active, suspended, closed, pending_deletion]
+        status_reason:
+          type: string
+        status_changed_at:
+          type: string
+          format: date-time
+        tags:
+          type: array
+          items:
+            type: string
+        segments:
+          type: object
+          additionalProperties:
+            type: string
+
+    UpdateSettingsTagsRequest:
+      type: object
+      properties:
+        add:
+          type: array
+          items:
+            type: string
+        remove:
+          type: array
+          items:
+            type: string
+
+    ConsentLog:
+      type: object
+      properties:
+        channel:
+          type: string
+          enum: [email, sms, push, postal]
+        action:
+          type: string
+          enum: [opt_in, opt_out]
+        source:
+          type: string
+        source_ref:
+          type: string
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+        recorded_at:
+          type: string
+          format: date-time
+
+    ExportProfileResponse:
+      type: object
+      properties:
+        export_id:
+          type: string
+        download_url:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+
+    MintUnsubscribeTokenResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
+    UnsubscribeRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
 
     ProblemDetail:
       type: object

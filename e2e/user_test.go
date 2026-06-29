@@ -5,9 +5,12 @@ package e2e_test
 import (
 	"net/http"
 	"testing"
+
+	"github.com/rdevitto86/komodo-forge-sdk-go/testing/testutil"
 )
 
 func TestHealth(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/health", nil)
 	defer res.Body.Close()
 	checkStatus(t, res, http.StatusOK)
@@ -17,6 +20,7 @@ func TestHealth(t *testing.T) {
 
 // TestGetProfile_NoAuth verifies unauthenticated requests are rejected.
 func TestGetProfile_NoAuth(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/me/profile", nil)
 	defer res.Body.Close()
 	checkStatus(t, res, http.StatusUnauthorized)
@@ -24,6 +28,7 @@ func TestGetProfile_NoAuth(t *testing.T) {
 
 // TestGetProfile fetches the authenticated user's profile.
 func TestGetProfile(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/me/profile", authHeader(t))
 	defer res.Body.Close()
 	checkStatus(t, res, http.StatusOK)
@@ -40,6 +45,7 @@ func TestGetProfile(t *testing.T) {
 
 // TestUpdateProfile updates a mutable profile field.
 func TestUpdateProfile(t *testing.T) {
+	testutil.E2E(t)
 	h := authHeader(t)
 	res := put(t, "/me/profile", map[string]any{"display_name": "E2E Test User"}, h)
 	defer res.Body.Close()
@@ -50,6 +56,7 @@ func TestUpdateProfile(t *testing.T) {
 
 // TestAddresses_NoAuth verifies address routes require auth.
 func TestAddresses_NoAuth(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/me/addresses", nil)
 	defer res.Body.Close()
 	checkStatus(t, res, http.StatusUnauthorized)
@@ -58,6 +65,7 @@ func TestAddresses_NoAuth(t *testing.T) {
 // TestAddresses_List fetches the authenticated user's saved addresses.
 // Returns 501 if DynamoDB schema is not yet wired.
 func TestAddresses_List(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/me/addresses", authHeader(t))
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotImplemented {
@@ -68,6 +76,7 @@ func TestAddresses_List(t *testing.T) {
 
 // TestAddresses_AddAndDelete adds a new address then deletes it.
 func TestAddresses_AddAndDelete(t *testing.T) {
+	testutil.E2E(t)
 	h := authHeader(t)
 
 	addr := map[string]any{
@@ -102,6 +111,7 @@ func TestAddresses_AddAndDelete(t *testing.T) {
 
 // TestPayments_NoAuth verifies payment routes require auth.
 func TestPayments_NoAuth(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/me/payments", nil)
 	defer res.Body.Close()
 	checkStatus(t, res, http.StatusUnauthorized)
@@ -109,6 +119,7 @@ func TestPayments_NoAuth(t *testing.T) {
 
 // TestPayments_List fetches the authenticated user's saved payment methods.
 func TestPayments_List(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/me/payments", authHeader(t))
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotImplemented {
@@ -121,6 +132,7 @@ func TestPayments_List(t *testing.T) {
 
 // TestPreferences_NoAuth verifies preference routes require auth.
 func TestPreferences_NoAuth(t *testing.T) {
+	testutil.E2E(t)
 	res := get(t, "/me/preferences", nil)
 	defer res.Body.Close()
 	checkStatus(t, res, http.StatusUnauthorized)
@@ -128,6 +140,7 @@ func TestPreferences_NoAuth(t *testing.T) {
 
 // TestPreferences_GetAndUpdate reads then updates user preferences.
 func TestPreferences_GetAndUpdate(t *testing.T) {
+	testutil.E2E(t)
 	h := authHeader(t)
 
 	getResp := get(t, "/me/preferences", h)
@@ -147,6 +160,7 @@ func TestPreferences_GetAndUpdate(t *testing.T) {
 
 // TestPreferences_Delete removes the authenticated user's preferences.
 func TestPreferences_Delete(t *testing.T) {
+	testutil.E2E(t)
 	h := authHeader(t)
 	res := del(t, "/me/preferences", h)
 	defer res.Body.Close()

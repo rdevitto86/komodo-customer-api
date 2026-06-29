@@ -10,6 +10,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.0
 	github.com/rdevitto86/komodo-forge-sdk-go v0.19.1
 	github.com/segmentio/ksuid v1.0.4
+	github.com/stretchr/testify v1.11.1
+	go.uber.org/mock v0.6.0
 	golang.org/x/time v0.15.0
 )
 
@@ -35,8 +37,10 @@ require (
 	github.com/aws/smithy-go v1.27.2 // indirect
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/redis/go-redis/v9 v9.20.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect

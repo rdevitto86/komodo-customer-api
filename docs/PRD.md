@@ -19,7 +19,7 @@ The User API is the **sole owner of user identity data** for Komodo: the canonic
 
 - **Authentication** — handled by `komodo-auth-api`; this service is a data store, not an authenticator.
 - **Authorization / RBAC** — scope enforcement belongs to `komodo-access-api`; token issuance to `komodo-auth-api`.
-- **Password storage** — Komodo is passwordless (passkeys + OTP); no password hashes or password fields exist anywhere in this service.
+- **Password storage as primary auth** — Komodo is passwordless-primary (passkeys + OTP); password is supported as a backup mode. Hashing stays in auth-api; this service stores the hash on the private plane only.
 - **Loyalty program** — handled by `komodo-loyalty-api`.
 - **Order history** — handled by `komodo-order-api`.
 - **Address validation** — validation logic belongs to `komodo-address-api`; this service stores user-chosen addresses.
@@ -59,18 +59,16 @@ The User API is the **sole owner of user identity data** for Komodo: the canonic
 
 ## Deployment
 
-- **V1:** EC2 docker-compose (existing `deploy/` path).
-- **V2:** ECS Fargate via `infra/deploy/cfn/`.
-- Ports per enterprise allocation: TBD.
+ECS Fargate via CDK (`deploy/cdk/main.ts`); public port 7051, private port 7052.
 
 ## Dependencies
 
 - `komodo-auth-api` — caller for credential resolution and passkey credential CRUD; this service serves auth-api on the login hot path.
 - `komodo-address-api` — address validation (customer-api stores, address-api validates).
 - `komodo-payments-api` — consumer of stored payment method tokens via internal route.
-- DynamoDB (`komodo-users` table) — primary data store; single-table design.
-- Cache for profile data (V2 consideration).
-- Event bus for user lifecycle events (V2 consideration).
+- DynamoDB (`komodo-customers` table) — primary data store; single-table design.
+- Cache for profile data — in-process TTL cache (profile + credentials, 60s TTL).
+- Event bus for user lifecycle events — DynamoDB Streams → events-api CDC Lambda.
 
 ## Roadmap
 

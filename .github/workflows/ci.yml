@@ -1,0 +1,55 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout
+      - uses: actions/checkout@v4
+
+      # Setup Go
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Build
+      - name: Build
+        run: go build ./...
+
+      # Vet
+      - name: Vet
+        run: go vet ./...
+
+      # Lint
+      - uses: golangci/golangci-lint-action@v8
+
+      # Test (race + cover)
+      - name: Test
+        run: go test -race -coverprofile=coverage.out ./...
+
+      # Coverage floor
+      - name: Coverage floor
+        run: |
+          go tool cover -func=coverage.out | awk '
+            /^total:/ { next }
+            /cmd\// { next }
+            /mocks\// { next }
+            {
+              pkg=$1; pct=$3
+              gsub(/%/, "", pct)
+              if (pct+0 < 80) {
+                print "FAIL: " pkg " coverage " pct "% < 80%"
+                fail=1
+              }
+            }
+            END { exit fail }
+          '
+
+      # Security scan
+      - name: Security scan
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...

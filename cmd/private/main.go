@@ -149,7 +149,7 @@ func main() {
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		ReadHeaderTimeout: 2 * time.Second,
-		MaxHeaderBytes:    1 << 20, // 1 MB
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	srv.Run(server, os.Getenv(sdkapi.PORT_PRIVATE), 30*time.Second)

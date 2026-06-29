@@ -8,7 +8,6 @@ import (
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"komodo-customer-api/internal/cache"
-	"komodo-customer-api/internal/db"
 	"komodo-customer-api/internal/models"
 
 	logger "github.com/rdevitto86/komodo-forge-sdk-go/logging/runtime"
@@ -21,7 +20,7 @@ type ServiceExtraConfig struct {
 }
 
 type Service struct {
-	repo             *db.Repo
+	repo             repository
 	profileCache     *cache.TTLCache[string, *models.User]
 	credentialsCache *cache.TTLCache[string, *models.CredentialsResponse]
 	s3Client         *awss3.Client
@@ -29,7 +28,7 @@ type Service struct {
 	unsubscribeKey   []byte
 }
 
-func NewService(repo *db.Repo, cfg ServiceExtraConfig) *Service {
+func NewService(repo repository, cfg ServiceExtraConfig) *Service {
 	return &Service{
 		repo:             repo,
 		profileCache:     cache.New[string, *models.User](5 * time.Minute),

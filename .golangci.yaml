@@ -38,7 +38,6 @@ linters:
     gosec:
       excludes:
         - G101   # env-key constant names, not embedded credentials
-        - G104   # os.Setenv passthrough in main bootstrap (errcheck-excluded there too)
         - G115   # integer overflow — not applicable here
 
     revive:
@@ -72,6 +71,10 @@ linters:
         linters:
           - contextcheck
           - errcheck
+      - path: "main\\.go"
+        linters:
+          - gosec
+        text: "G104"
 
 formatters:
   enable:

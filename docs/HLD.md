@@ -34,7 +34,7 @@ Customer-api is the canonical store for customer identity data: profiles, accoun
 | `cmd/public/main.go`, `cmd/private/main.go` | Bootstrap, secrets load, dependency wiring, route registration, server start |
 | `internal/api/*_handler.go` | HTTP handlers per resource (profile, settings, passkey, address, payment, preferences, consent, export, unsubscribe) |
 | `internal/api/service.go` | Service-layer orchestration: invariants (`is_default` singleton, namespace ACL), cross-entity mutations, event-trigger conditions |
-| `internal/db/user.go` | DynamoDB adapter: single-table access patterns, GSI1 queries, chunked `TransactWriteItems` |
+| `internal/db/customer.go` | DynamoDB adapter: single-table access patterns, GSI1 queries, chunked `TransactWriteItems` |
 | `internal/cache/cache.go` | In-process TTL cache (`sync.Map` + envelope, background evictor); profile + credentials cached 60s |
 | `internal/models` | DTOs, error codes, JSON contracts |
 | `komodo-forge-sdk-go` | `http/server`, `http/middleware` (auth, rate limit, request-id, CORS), `http/errors`, `aws/secrets-manager`, `aws/dynamodb`, `security/jwt`, `logging`, `api/handlers/health` |
